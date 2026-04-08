@@ -1,0 +1,15 @@
+FROM golang:1.26.1-alpine as builder
+ARG CGO_ENABLED=0
+WORKDIR /app
+
+COPY go.mod ./
+RUN go mod download
+COPY . .
+
+RUN go build -o /app/server ./cmd/server/main.go
+
+FROM alpine:latest 
+COPY --from=builder /app/server .
+
+EXPOSE 8080
+CMD ["./server"]
