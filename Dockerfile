@@ -10,6 +10,7 @@ RUN go build -o /app/server ./cmd/server/main.go
 
 FROM alpine:latest 
 COPY --from=builder /app/server .
+COPY --from=builder /app/configs ./configs
 
 EXPOSE 8080
 CMD ["./server"]
