@@ -128,11 +128,16 @@ func (h *Handler) GetSubscriptions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(subs)
+	if err := json.NewEncoder(w).Encode(subs); err != nil {
+		h.log.Error("failed to encode response", "err", err)
+		h.sendError(w, "failed to encode response", http.StatusInternalServerError)
+	}
 }
 
 func (h *Handler) sendError(w http.ResponseWriter, message string, code int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
-	json.NewEncoder(w).Encode(dto.ErrorResponse{Message: message})
+	if err := json.NewEncoder(w).Encode(dto.ErrorResponse{Message: message}); err != nil {
+		h.log.Error("failed to encode response", "err", err)
+	}
 }

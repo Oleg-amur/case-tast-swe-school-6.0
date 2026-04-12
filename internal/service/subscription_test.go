@@ -17,8 +17,8 @@ func TestSubscribe(t *testing.T) {
 	log := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
 	tests := []struct {
-		name          string
-		req           dto.SubscribeRequest
+		name           string
+		req            dto.SubscribeRequest
 		ghTag          string
 		ghErr          error
 		ghExists       bool
@@ -26,11 +26,11 @@ func TestSubscribe(t *testing.T) {
 		subRepoSub     *models.Subscriber
 		getByEmailErr  error
 		createSubErr   error
-		repoRepoRepo  *models.Repository
-		getByNameErr  error
-		createRepoErr error
-		subCreateErr  error
-		expectedError error
+		repoRepoRepo   *models.Repository
+		getByNameErr   error
+		createRepoErr  error
+		subCreateErr   error
+		expectedError  error
 	}{
 		{
 			name:          "Invalid format",
@@ -38,11 +38,11 @@ func TestSubscribe(t *testing.T) {
 			expectedError: apperr.ErrInvalidFormat,
 		},
 		{
-			name:          "GitHub rate limit",
-			req:           dto.SubscribeRequest{Email: "test@example.com", Repo: "owner/repo"},
-			getByNameErr:  sql.ErrNoRows,
+			name:           "GitHub rate limit",
+			req:            dto.SubscribeRequest{Email: "test@example.com", Repo: "owner/repo"},
+			getByNameErr:   sql.ErrNoRows,
 			checkExistsErr: apperr.ErrRateLimitExceeded,
-			expectedError: apperr.ErrRateLimitExceeded,
+			expectedError:  apperr.ErrRateLimitExceeded,
 		},
 		{
 			name:          "Repository not found",
@@ -55,8 +55,8 @@ func TestSubscribe(t *testing.T) {
 			name:          "Repository has no releases but exists",
 			req:           dto.SubscribeRequest{Email: "test@example.com", Repo: "owner/repo"},
 			getByNameErr:  sql.ErrNoRows,
-			ghErr:         apperr.ErrRepoNotFound, // GetRepositoryLatestTag returns 404
-			ghExists:      true,                   // CheckIfRepoExists returns true
+			ghErr:         apperr.ErrRepoNotFound,
+			ghExists:      true,
 			subRepoSub:    &models.Subscriber{ID: 1, Email: "test@example.com"},
 			repoRepoRepo:  &models.Repository{ID: 1, Name: "owner/repo"},
 			expectedError: nil,
@@ -75,7 +75,7 @@ func TestSubscribe(t *testing.T) {
 		{
 			name:          "Success (Existing Repo in DB)",
 			req:           dto.SubscribeRequest{Email: "test@example.com", Repo: "owner/repo"},
-			getByNameErr:  nil, // Repo found in DB
+			getByNameErr:  nil,
 			repoRepoRepo:  &models.Repository{ID: 1, Name: "owner/repo"},
 			subRepoSub:    &models.Subscriber{ID: 1, Email: "test@example.com"},
 			expectedError: nil,
@@ -83,7 +83,7 @@ func TestSubscribe(t *testing.T) {
 		{
 			name:          "Already subscribed",
 			req:           dto.SubscribeRequest{Email: "test@example.com", Repo: "owner/repo"},
-			getByNameErr:  nil, // Repo found in DB
+			getByNameErr:  nil,
 			repoRepoRepo:  &models.Repository{ID: 1, Name: "owner/repo"},
 			subRepoSub:    &models.Subscriber{ID: 1, Email: "test@example.com"},
 			subCreateErr:  apperr.ErrAlreadyExists,
@@ -339,4 +339,3 @@ func (m *mockGithubClient) GetRepositoryLatestTag(ctx context.Context, repoAddr 
 func (m *mockGithubClient) CheckIfRepoExists(ctx context.Context, repoAddr string, log *slog.Logger) (bool, error) {
 	return m.exists, m.checkExistsErr
 }
-

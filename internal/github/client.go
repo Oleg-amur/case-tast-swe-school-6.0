@@ -3,6 +3,7 @@ package github
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -51,7 +52,11 @@ func (c *Client) CheckIfRepoExists(ctx context.Context, repoAddr string, log *sl
 	if err != nil {
 		return false, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if rErr := resp.Body.Close(); err != nil {
+			err = errors.Join(err, rErr)
+		}
+	}()
 
 	if resp.StatusCode == http.StatusTooManyRequests {
 		return false, apperr.ErrRateLimitExceeded
@@ -89,7 +94,11 @@ func (c *Client) GetRepositoryLatestTag(ctx context.Context, repoAddr string, lo
 	if err != nil {
 		return latestTag, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if rErr := resp.Body.Close(); err != nil {
+			err = errors.Join(err, rErr)
+		}
+	}()
 
 	if resp.StatusCode == http.StatusTooManyRequests {
 		return latestTag, apperr.ErrRateLimitExceeded

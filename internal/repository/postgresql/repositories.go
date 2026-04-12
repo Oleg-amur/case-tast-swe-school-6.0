@@ -3,6 +3,7 @@ package postgresql
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/Oleg-amur/case-task-swe-school-6.0/internal/models"
@@ -51,7 +52,10 @@ func (r *RepositoryRepository) GetAll(ctx context.Context) ([]models.Repository,
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		clErr := rows.Close()
+		err = errors.Join(err, clErr)
+	}()
 
 	var repos []models.Repository
 	for rows.Next() {

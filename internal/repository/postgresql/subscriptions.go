@@ -3,6 +3,7 @@ package postgresql
 import (
 	"context"
 	"database/sql"
+	"errors"
 
 	"github.com/Oleg-amur/case-task-swe-school-6.0/internal/apperr"
 	"github.com/Oleg-amur/case-task-swe-school-6.0/internal/models"
@@ -26,7 +27,7 @@ func (r *SubscriptionRepository) Create(ctx context.Context, subID, repoID int, 
 	if err != nil {
 		return err
 	}
-	
+
 	rows, err := res.RowsAffected()
 	if err != nil {
 		return err
@@ -34,7 +35,7 @@ func (r *SubscriptionRepository) Create(ctx context.Context, subID, repoID int, 
 	if rows == 0 {
 		return apperr.ErrAlreadyExists
 	}
-	
+
 	return nil
 }
 
@@ -91,7 +92,10 @@ func (r *SubscriptionRepository) GetActiveByEmail(ctx context.Context, email str
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		clErr := rows.Close()
+		err = errors.Join(err, clErr)
+	}()
 
 	var subs []models.Subscription
 	for rows.Next() {
@@ -127,7 +131,10 @@ func (r *SubscriptionRepository) GetActiveByRepoID(ctx context.Context, repoID i
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		clErr := rows.Close()
+		err = errors.Join(err, clErr)
+	}()
 
 	var subs []models.Subscription
 	for rows.Next() {

@@ -44,11 +44,20 @@ func runApp(log *slog.Logger) error {
 		return err
 	}
 
-	db, err := setupDB(ctx, cfg.Database, log)
+	db, err := database.InitDb(ctx, cfg.Database.ConnectionString, log)
 	if err != nil {
 		return err
 	}
-	defer db.Close()
+	defer func(db *sql.DB) {
+		err := db.Close()
+		if err != nil {
+			log.Error("unable to close database connection", "error", err)
+		}
+	}(db)
+
+	if err := database.RunMigrations(ctx, db, log); err != nil {
+		return err
+	}
 
 	githubClient, err := setupGithubClient(cfg.GithubClient)
 	if err != nil {
@@ -113,16 +122,6 @@ func runApp(log *slog.Logger) error {
 }
 
 func setupDB(ctx context.Context, cfg config.Database, log *slog.Logger) (*sql.DB, error) {
-	db, err := database.InitDb(ctx, cfg.ConnectionString, log)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := database.RunMigrations(ctx, db, log); err != nil {
-		db.Close()
-		return nil, err
-	}
-	return db, nil
 }
 
 func setupGithubClient(cfg config.GithubClient) (*github.Client, error) {
