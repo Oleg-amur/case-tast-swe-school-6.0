@@ -121,9 +121,6 @@ func runApp(log *slog.Logger) error {
 	return nil
 }
 
-func setupDB(ctx context.Context, cfg config.Database, log *slog.Logger) (*sql.DB, error) {
-}
-
 func setupGithubClient(cfg config.GithubClient) (*github.Client, error) {
 	timeout, err := time.ParseDuration(cfg.Timeout)
 	if err != nil {
