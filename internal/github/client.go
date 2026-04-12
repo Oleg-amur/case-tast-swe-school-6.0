@@ -36,7 +36,6 @@ func NewClient(url string, token string, timeout time.Duration) *Client {
 func (c *Client) CheckIfRepoExists(ctx context.Context, repoAddr string, log *slog.Logger) (bool, error) {
 
 	url := fmt.Sprintf("%s/repos/%s", c.baseUrl, repoAddr)
-	log.Info(url)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return false, err
@@ -78,7 +77,6 @@ func (c *Client) GetRepositoryLatestTag(ctx context.Context, repoAddr string, lo
 	latestTag := ""
 
 	url := fmt.Sprintf("%s/repos/%s/releases/latest", c.baseUrl, repoAddr)
-	log.Info(url)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return latestTag, err

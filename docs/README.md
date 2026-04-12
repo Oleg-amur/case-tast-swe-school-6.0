@@ -38,20 +38,27 @@ Requirements:
 
 # Project Structure:
 
---.github/workflows
---docs/
---cmd/server/main.go
---internal/
-        --api/ // there are http and grpc handlers, dtos and so on
-        --scanner/
-        --notifier/
-        --repository/
-        --models/
-        --server/
+  ├── .github/workflows  # CI/CD pipelines
+  ├── api/               # API definitions (Swagger/Proto)
+  ├── cmd/
+  │   └── server/        # Entry point
+  ├── configs/           # YAML configuration files
+  ├── docs/              # Documentation
+  ├── internal/
+  │   ├── api/           # HTTP and gRPC handlers + DTOs
+  │   ├── apperr/        # Centralized application errors
+  │   ├── config/        # Configuration loading 
+  │   ├── database/      # DB initialization and migration runner
+  │   ├── github/        # GitHub API client
+  │   ├── models/        # Domain entities
+  │   ├── notifier/      # Email notification logic
+  │   ├── repository/    
+  │   ├── scanner/       # New releases scanner
+  │   └── service/       # Services
+  └── migrations/        # SQL migration files
+structure generated using AI
 
---migrations/
-
-(inspired by this)[https://github.com/golang-standards/project-layout/tree/master]
+inspired partially by [this](https://github.com/golang-standards/project-layout/tree/master)
 
 # Main business logic:
 
@@ -60,6 +67,7 @@ Requirements:
 - loop through them and get latest release
 - compare with last_seen_tag
 - notify all subscribers to this repository if different
+- if we hit rate limit, skip all requests until next scan (there could be some kind of sleep, but i don't not if we need it here)
 
 # Issues I've faced with
 
