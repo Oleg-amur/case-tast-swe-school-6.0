@@ -55,7 +55,7 @@ func NewScanner(
 }
 
 func (s *Scanner) Start(ctx context.Context) {
-	s.log.Info("Background scanner started", "interval", s.interval)
+	s.log.Info("background scanner started", "interval", s.interval)
 	ticker := time.NewTicker(s.interval)
 	defer ticker.Stop()
 
@@ -64,7 +64,7 @@ func (s *Scanner) Start(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			s.log.Info("Background scanner stopping...")
+			s.log.Info("background scanner stopping")
 			return
 		case <-ticker.C:
 			s.Scan(ctx)
@@ -73,11 +73,11 @@ func (s *Scanner) Start(ctx context.Context) {
 }
 
 func (s *Scanner) Scan(ctx context.Context) {
-	s.log.Debug("Starting repository scan")
+	s.log.Debug("starting repository scan")
 
 	repos, err := s.repoRepository.GetAll(ctx)
 	if err != nil {
-		s.log.Error("Failed to fetch repositories from DB", "err", err)
+		s.log.Error("failed to fetch repositories from db", "err", err)
 		return
 	}
 
@@ -85,10 +85,10 @@ func (s *Scanner) Scan(ctx context.Context) {
 		latestTag, err := s.githubClient.GetRepositoryLatestTag(ctx, repo.Name, s.log)
 		if err != nil {
 			if errors.Is(err, apperr.ErrRateLimitExceeded) {
-				s.log.Warn("Rate limit reached", "error", err)
+				s.log.Warn("rate limit reached", "error", err)
 				break
 			}
-			s.log.Error("Failed to get latest release from GitHub", "repo", repo.Name, "err", err)
+			s.log.Error("failed to get latest release from github", "repo", repo.Name, "err", err)
 			continue
 		}
 
@@ -97,23 +97,23 @@ func (s *Scanner) Scan(ctx context.Context) {
 		}
 
 		if repo.LastSeenTag != latestTag {
-			s.log.Info("New release found!", "repo", repo.Name, "old", repo.LastSeenTag, "new", latestTag)
+			s.log.Info("new release found", "repo", repo.Name, "old", repo.LastSeenTag, "new", latestTag)
 
 			if err := s.repoRepository.UpdateTag(ctx, repo.ID, latestTag); err != nil {
-				s.log.Error("Failed to update last_seen_tag", "repo", repo.Name, "err", err)
+				s.log.Error("failed to update last_seen_tag", "repo", repo.Name, "err", err)
 				continue
 			}
 
 			subs, err := s.subscriptionRepo.GetActiveByRepoID(ctx, repo.ID)
 			if err != nil {
-				s.log.Error("Failed to fetch subscribers for repo", "repo", repo.Name, "err", err)
+				s.log.Error("failed to fetch subscribers for repo", "repo", repo.Name, "err", err)
 				continue
 			}
 
 			for _, sub := range subs {
-				s.log.Info("Sending release notification", "email", sub.Subscriber.Email, "repo", repo.Name, "tag", latestTag)
+				s.log.Info("sending release notification", "email", sub.Subscriber.Email, "repo", repo.Name, "tag", latestTag)
 				if err := s.notifier.SendReleaseNotification(ctx, sub.Subscriber.Email, repo.Name, latestTag); err != nil {
-					s.log.Error("Failed to send notification", "email", sub.Subscriber.Email, "err", err)
+					s.log.Error("failed to send notification", "email", sub.Subscriber.Email, "err", err)
 				}
 			}
 		}
