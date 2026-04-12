@@ -3,7 +3,6 @@ package github
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -18,9 +17,6 @@ type Client struct {
 	apiToken   string
 }
 
-type Repository struct {
-}
-
 type ReleaseResponse struct {
 	TagName string `json:"tag_name"`
 }
@@ -33,12 +29,10 @@ func NewClient(url string, token string, timeout time.Duration) *Client {
 	}
 }
 
-func (c *Client) CheckIfRepoExists(ctx context.Context, repoAddr string, log *slog.Logger) (bool, error) {
-
-	url := fmt.Sprintf("%s/repos/%s", c.baseUrl, repoAddr)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+func (c *Client) do(ctx context.Context, method, url string) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, method, url, nil)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
 	req.Header.Set("Accept", "application/vnd.github+json")
@@ -49,17 +43,30 @@ func (c *Client) CheckIfRepoExists(ctx context.Context, repoAddr string, log *sl
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode == http.StatusTooManyRequests {
+		_ = resp.Body.Close()
+		return nil, apperr.ErrRateLimitExceeded
+	}
+
+	return resp, nil
+}
+
+func (c *Client) CheckIfRepoExists(ctx context.Context, repoAddr string, log *slog.Logger) (bool, error) {
+	url := fmt.Sprintf("%s/repos/%s", c.baseUrl, repoAddr)
+	log.Info("checking repository existence", "url", url)
+
+	resp, err := c.do(ctx, http.MethodGet, url)
+	if err != nil {
 		return false, err
 	}
 	defer func() {
-		if rErr := resp.Body.Close(); err != nil {
-			err = errors.Join(err, rErr)
+		if rErr := resp.Body.Close(); rErr != nil {
+			log.Error("failed to close response body", "err", rErr)
 		}
 	}()
-
-	if resp.StatusCode == http.StatusTooManyRequests {
-		return false, apperr.ErrRateLimitExceeded
-	}
 
 	if resp.StatusCode == http.StatusNotFound {
 		return false, nil
@@ -73,47 +80,31 @@ func (c *Client) CheckIfRepoExists(ctx context.Context, repoAddr string, log *sl
 }
 
 func (c *Client) GetRepositoryLatestTag(ctx context.Context, repoAddr string, log *slog.Logger) (string, error) {
-
-	latestTag := ""
-
 	url := fmt.Sprintf("%s/repos/%s/releases/latest", c.baseUrl, repoAddr)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return latestTag, err
-	}
+	log.Info("fetching latest release", "url", url)
 
-	req.Header.Set("Accept", "application/vnd.github+json")
-	req.Header.Set("X-GitHub-Api-Version", "2026-03-10")
-	if c.apiToken != "" {
-		req.Header.Set("Authorization", "Bearer "+c.apiToken)
-	}
-
-	resp, err := c.httpClient.Do(req)
+	resp, err := c.do(ctx, http.MethodGet, url)
 	if err != nil {
-		return latestTag, err
+		return "", err
 	}
 	defer func() {
-		if rErr := resp.Body.Close(); err != nil {
-			err = errors.Join(err, rErr)
+		if rErr := resp.Body.Close(); rErr != nil {
+			log.Error("failed to close response body", "err", rErr)
 		}
 	}()
 
-	if resp.StatusCode == http.StatusTooManyRequests {
-		return latestTag, apperr.ErrRateLimitExceeded
-	}
-
 	if resp.StatusCode == http.StatusNotFound {
-		return latestTag, apperr.ErrRepoNotFound
+		return "", apperr.ErrRepoNotFound
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return latestTag, fmt.Errorf("github api error: %d", resp.StatusCode)
+		return "", fmt.Errorf("github api error: %d", resp.StatusCode)
 	}
 
-	var repo ReleaseResponse
-	if err := json.NewDecoder(resp.Body).Decode(&repo); err != nil {
-		return latestTag, err
+	var release ReleaseResponse
+	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
+		return "", fmt.Errorf("failed to decode release response: %w", err)
 	}
 
-	return repo.TagName, nil
+	return release.TagName, nil
 }
